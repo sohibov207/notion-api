@@ -34,6 +34,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Password is required'],
     minlength: [6, 'Password must be at least 6 characters long']
+  },
+  avatar: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true
@@ -54,7 +58,6 @@ userSchema.pre('save', async function(next) {
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
-
 
 userSchema.methods.toJSON = function() {
   const userObject = this.toObject();

@@ -4,21 +4,21 @@ const db = require("./app/configs/db.config");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middlewares
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
+
 const authRoutes = require('./app/routes/auth.routes');
 const taskRoutes = require('./app/routes/task.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
 
-// Database connection status
+
 console.log(db.getConnectionStatus());
 
-// Root route
+
 app.get('/', (req, res) => {
   res.json({
     message: 'Notion API Server',
@@ -27,9 +27,10 @@ app.get('/', (req, res) => {
       auth: {
         signup: 'POST /api/auth/signup',
         login: 'POST /api/auth/login',
-        logout: 'POST /api/auth/logout',
-        profile: 'GET /api/auth/profile',
-        editProfile: 'PUT /api/auth/profile'
+        logout: 'POST /api/auth/logout (requires token)',
+        profile: 'GET /api/auth/profile (requires token)',
+        editProfile: 'PUT /api/auth/profile (requires token)',
+        deleteAccount: 'DELETE /api/auth/account (requires token)'
       },
       tasks: 'GET /api/tasks'
     }

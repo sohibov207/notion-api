@@ -79,21 +79,16 @@ const signup = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { identifier, password } = req.body;
+    const { email, password } = req.body; // identifier -> email ga o'zgartirildi
 
-    if (!identifier || !password) {
+    if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Username/Email and password are required'
+        message: 'Email and password are required'
       });
     }
 
-    const user = await User.findOne({
-      $or: [
-        { email: identifier },
-        { username: identifier }
-      ]
-    });
+    const user = await User.findOne({ email }); // Faqat email bo'yicha qidirish
 
     if (!user) {
       return res.status(401).json({
@@ -101,6 +96,7 @@ const login = async (req, res) => {
         message: 'Invalid credentials'
       });
     }
+    
     const isPasswordValid = await user.comparePassword(password);
 
     if (!isPasswordValid) {
@@ -109,7 +105,6 @@ const login = async (req, res) => {
         message: 'Invalid credentials'
       });
     }
-
 
     const token = generateToken(user._id);
 
@@ -164,6 +159,60 @@ const getProfile = async (req, res) => {
     });
   } catch (error) {
     console.error('Get profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};
+
+const updateAvatar = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Avatar image file is required'
+      });
+    }
+
+    if (user.avatar) {
+      const oldAvatarPath = path.join(__dirname, '..', user.avatar);
+      if (fs.existsSync(oldAvatarPath)) {
+        fs.unlinkSync(oldAvatarPath);
+      }
+    }
+
+    user.avatar = req.file.path;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Avatar updated successfully',
+      data: {
+        avatar: user.avatar
+      }
+    });
+
+  } catch (error) {
+    console.error('Update avatar error:', error);
+    
+    if (req.file) {
+      const filePath = path.join(__dirname, '..', req.file.path);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -248,10 +297,31 @@ const editProfile = async (req, res) => {
   }
 };
 
+
+const deleteAccount = async (req, res) => {
+  try {
+    const userId = req.params.id; 
+
+    const user = await User.findByIdAndDelete(userId);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.status(200).json({ success: true, message: 'Account deleted successfully' });
+  } catch (error) {
+    console.error('Delete account error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+
 module.exports = {
   signup,
   login,
   logout,
   getProfile,
-  editProfile
+  editProfile,
+  deleteAccount,
+  updateAvatar
 };
