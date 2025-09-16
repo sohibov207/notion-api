@@ -1,4 +1,4 @@
-# 📝 Notion Clone API
+# 📝 Notion API Clone
 
 A fully functional **Notion-inspired API** built with **Node.js + Express**.
 Supports **authentication, boards, columns, pages, CRUD operations, swapping columns, moving pages**, and comes with **Swagger API docs**.
