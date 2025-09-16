@@ -53,7 +53,7 @@ class Database {
     });
 
     mongoose.connection.on("disconnected", () => {
-      console.log("🔌 Mongoose disconnected from MongoDB");
+      console.log("Mongoose disconnected from MongoDB");
       this.isConnected = false;
     });
 
@@ -64,7 +64,7 @@ class Database {
   _gracefulShutdown = async () => {
     try {
       await mongoose.connection.close();
-      console.log("👋 MongoDB connection closed through app termination");
+      console.log("MongoDB connection closed through app termination");
       process.exit(0);
     } catch (error) {
       console.error("Error closing MongoDB connection:", error);
