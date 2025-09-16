@@ -1,108 +1,115 @@
-const User = require('../models/user.model');
-const jwt = require('jsonwebtoken');
-
+const User = require("../models/user.model");
+const Board = require("../models/board.model");
+const Column = require("../models/column.model");
+const jwt = require("jsonwebtoken");
 
 const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET || 'fallback_secret', {
-    expiresIn: '7d'
+  return jwt.sign({ userId }, process.env.JWT_SECRET || "fallback_secret", {
+    expiresIn: "7d",
   });
 };
-
 
 const signup = async (req, res) => {
   try {
     const { username, firstName, lastName, email, password } = req.body;
 
-
     if (!username || !firstName || !lastName || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'All required fields must be filled'
+        message: "All required fields must be filled",
       });
     }
 
-
     const existingUser = await User.findOne({
-      $or: [{ email }, { username }]
+      $or: [{ email }, { username }],
     });
 
     if (existingUser) {
-      const field = existingUser.email === email ? 'email' : 'username';
+      const field = existingUser.email === email ? "email" : "username";
       return res.status(400).json({
         success: false,
-        message: `This ${field} is already taken`
+        message: `This ${field} is already taken`,
       });
     }
-
 
     const user = new User({
       username,
       firstName,
       lastName,
       email,
-      password
+      password,
     });
 
     await user.save();
 
+    const board = await Board.create({
+      title: "New database",
+      description: "Add description",
+      owner: user._id,
+    });
+
+    await Column.insertMany([
+      { name: "Not started", order: 1, board: board._id },
+      { name: "In progress", order: 2, board: board._id },
+      { name: "Done", order: 3, board: board._id },
+    ]);
 
     const token = generateToken(user._id);
 
     res.status(201).json({
       success: true,
-      message: 'User registered successfully',
+      message: "User registered successfully",
       data: {
         user,
-        token
-      }
+        board,
+        token,
+      },
     });
   } catch (error) {
-    console.error('Signup error:', error);
-    
+    console.error("Signup error:", error);
 
-    if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map(err => err.message);
+    if (error.name === "ValidationError") {
+      const errors = Object.values(error.errors).map((err) => err.message);
       return res.status(400).json({
         success: false,
-        message: 'Validation failed',
-        errors
+        message: "Validation failed",
+        errors,
       });
     }
 
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: "Server error",
     });
   }
 };
 
-
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body; // identifier -> email ga o'zgartirildi
+    const { email, password } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Email and password are required'
+        message: "Email and password are required",
       });
     }
 
-    const user = await User.findOne({ email }); // Faqat email bo'yicha qidirish
+    const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: "Invalid credentials",
       });
     }
-    
+
     const isPasswordValid = await user.comparePassword(password);
 
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: "Invalid credentials",
       });
     }
 
@@ -110,58 +117,56 @@ const login = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Login successful',
+      message: "Login successful",
       data: {
         user,
-        token
-      }
+        token,
+      },
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error("Login error:", error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: "Server error",
     });
   }
 };
-
 
 const logout = async (req, res) => {
   try {
     res.status(200).json({
       success: true,
-      message: 'Logout successful'
+      message: "Logout successful",
     });
   } catch (error) {
-    console.error('Logout error:', error);
+    console.error("Logout error:", error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: "Server error",
     });
   }
 };
 
-
 const getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.userId);
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: "User not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      data: { user }
+      data: { user },
     });
   } catch (error) {
-    console.error('Get profile error:', error);
+    console.error("Get profile error:", error);
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: "Server error",
     });
   }
 };
@@ -174,19 +179,19 @@ const updateAvatar = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: "User not found",
       });
     }
 
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: 'Avatar image file is required'
+        message: "Avatar image file is required",
       });
     }
 
     if (user.avatar) {
-      const oldAvatarPath = path.join(__dirname, '..', user.avatar);
+      const oldAvatarPath = path.join(__dirname, "..", user.avatar);
       if (fs.existsSync(oldAvatarPath)) {
         fs.unlinkSync(oldAvatarPath);
       }
@@ -197,17 +202,16 @@ const updateAvatar = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Avatar updated successfully',
+      message: "Avatar updated successfully",
       data: {
-        avatar: user.avatar
-      }
+        avatar: user.avatar,
+      },
     });
-
   } catch (error) {
-    console.error('Update avatar error:', error);
-    
+    console.error("Update avatar error:", error);
+
     if (req.file) {
-      const filePath = path.join(__dirname, '..', req.file.path);
+      const filePath = path.join(__dirname, "..", req.file.path);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
@@ -215,7 +219,7 @@ const updateAvatar = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: "Server error",
     });
   }
 };
@@ -234,7 +238,7 @@ const editProfile = async (req, res) => {
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'No data provided for update'
+        message: "No data provided for update",
       });
     }
 
@@ -245,76 +249,77 @@ const editProfile = async (req, res) => {
           {
             $or: [
               ...(username ? [{ username }] : []),
-              ...(email ? [{ email }] : [])
-            ]
-          }
-        ]
+              ...(email ? [{ email }] : []),
+            ],
+          },
+        ],
       });
 
       if (existingUser) {
-        const field = existingUser.email === email ? 'email' : 'username';
+        const field = existingUser.email === email ? "email" : "username";
         return res.status(400).json({
           success: false,
-          message: `This ${field} is already taken`
+          message: `This ${field} is already taken`,
         });
       }
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      updateData,
-      { new: true, runValidators: true }
-    );
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+      runValidators: true,
+    });
 
     if (!updatedUser) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: "User not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: 'Profile updated successfully',
-      data: { user: updatedUser }
+      message: "Profile updated successfully",
+      data: { user: updatedUser },
     });
   } catch (error) {
-    console.error('Edit profile error:', error);
-    
-    if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map(err => err.message);
+    console.error("Edit profile error:", error);
+
+    if (error.name === "ValidationError") {
+      const errors = Object.values(error.errors).map((err) => err.message);
       return res.status(400).json({
         success: false,
-        message: 'Validation failed',
-        errors
+        message: "Validation failed",
+        errors,
       });
     }
 
     res.status(500).json({
       success: false,
-      message: 'Server error'
+      message: "Server error",
     });
   }
 };
 
-
 const deleteAccount = async (req, res) => {
   try {
-    const userId = req.params.id; 
+    const userId = req.params.id;
 
     const user = await User.findByIdAndDelete(userId);
 
     if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
-    res.status(200).json({ success: true, message: 'Account deleted successfully' });
+    res
+      .status(200)
+      .json({ success: true, message: "Account deleted successfully" });
   } catch (error) {
-    console.error('Delete account error:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error("Delete account error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
 
 module.exports = {
   signup,
@@ -323,5 +328,5 @@ module.exports = {
   getProfile,
   editProfile,
   deleteAccount,
-  updateAvatar
+  updateAvatar,
 };
