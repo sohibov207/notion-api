@@ -46,7 +46,7 @@ Supports **authentication, boards, columns, pages, CRUD operations, swapping col
 
    ```bash
    git clone https://github.com/sohibov207/notion-api.git
-   cd notion-clone-api
+   cd notion-api
    ```
 
 2. Install dependencies:
