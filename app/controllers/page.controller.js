@@ -64,40 +64,46 @@ async function deletePage(req, res) {
   }
 }
 
-async function swapPages(req, res) {
+async function movePage(req, res) {
   try {
     const { pageId } = req.params;
-    const { targetPosition } = req.body;
+    const { targetColumnId, targetPosition } = req.body;
 
     const page = await Page.findById(pageId);
     if (!page) {
       return res.status(404).json({ error: "Page not found" });
     }
 
-    const sourcePosition = page.position;
+    if (targetColumnId && page.column.toString() !== targetColumnId) {
+      await Column.findByIdAndUpdate(page.column, {
+        $pull: { pages: pageId },
+      });
 
-    if (sourcePosition === targetPosition) {
-      return res.status(200).json(page);
+      await Column.findByIdAndUpdate(targetColumnId, {
+        $push: { pages: pageId },
+      });
+
+      page.column = targetColumnId;
     }
 
-    const targetPage = await Page.findOne({
-      column: page.column,
-      position: targetPosition,
-    });
+    if (typeof targetPosition === "number") {
+      const pagesInColumn = await Page.find({ column: page.column }).sort({
+        position: 1,
+      });
 
-    if (!targetPage) {
-      return res.status(404).json({ error: "Target page not found" });
+      pagesInColumn.splice(page.position, 1);
+      pagesInColumn.splice(targetPosition, 0, page);
+
+      await Promise.all(
+        pagesInColumn.map((p, idx) =>
+          Page.findByIdAndUpdate(p._id, { position: idx })
+        )
+      );
     }
-
-    [page.position, targetPage.position] = [targetPage.position, page.position];
 
     await page.save();
-    await targetPage.save();
 
-    res.status(200).json({
-      message: "Pages swapped successfully",
-      pages: [page, targetPage],
-    });
+    res.status(200).json({ message: "Page moved successfully", page });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -107,5 +113,5 @@ module.exports = {
   getPages,
   createPage,
   deletePage,
-  swapPages,
+  movePage,
 };

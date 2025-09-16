@@ -3,7 +3,7 @@ const {
   getPages,
   createPage,
   deletePage,
-  swapPages,
+  movePage
 } = require("../controllers/page.controller");
 const authMiddleware = require("../middlewares/auth.middleware")
 const router = express.Router();
@@ -11,6 +11,6 @@ const router = express.Router();
 router.get("/:columnId/", authMiddleware, getPages);
 router.post("/:columnId/", authMiddleware, createPage);
 router.delete("/:pageId", authMiddleware, deletePage);
-router.patch("/:pageId/swap", authMiddleware, swapPages);
+router.patch("/:pageId/move", authMiddleware, movePage);
 
 module.exports = router;
